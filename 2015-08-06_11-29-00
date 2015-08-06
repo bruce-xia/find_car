@@ -1,0 +1,216 @@
+var http = require("http");
+var express = require("express");
+var path = require("path");
+var MongoClient = require("mongodb").MongoClient;
+var Server = require("mongodb").Server;
+var url = require("url");
+var app = express();
+app.set("port", process.env.PORT || 9E3);
+app.set("views", path.join(__dirname, "views"));
+app.set("view engine", "jade");
+app.use(express.bodyParser());
+app.use(express.static(__dirname + "/images"));
+/** @type {string} */
+var mongoHost = "localHost";
+/** @type {number} */
+var mongoPort = 27017;
+var fileDriver;
+var collectionDriver;
+/** @type {number} */
+usr = 0;
+/** @type {number} */
+phone = 0;
+var mongoClient = new MongoClient(new Server(mongoHost, mongoPort));
+mongoClient.open(function(dataAndEvents, deepDataAndEvents) {
+  if (!deepDataAndEvents) {
+    console.error("Error! Exiting... Must start MongoDB first");
+    process.exit(1);
+  }
+});
+var db = mongoClient.db("parking");
+/**
+ * @param {string} dataAndEvents
+ * @param {?} deepDataAndEvents
+ * @param {?} ignoreMethodDoesntExist
+ * @return {undefined}
+ */
+var insertUsr = function(dataAndEvents, deepDataAndEvents, ignoreMethodDoesntExist) {
+  var node = db.collection("usr");
+  node.insert({
+    usr_id : dataAndEvents,
+    qr_id : deepDataAndEvents,
+    p_flag : 1,
+    start : 8888,
+    end : 8888,
+    card_id : 8888
+  }, function(dataAndEvents, deepDataAndEvents) {
+    node.count(function(dataAndEvents, reply) {
+      console.log("insert user count = " + reply);
+    });
+  });
+  node.find().toArray(function(dataAndEvents, item) {
+    console.dir(item);
+  });
+};
+/**
+ * @param {?} dataAndEvents
+ * @param {?} deepDataAndEvents
+ * @return {undefined}
+ */
+var getLocbyqrID = function(dataAndEvents, deepDataAndEvents) {
+  var marker = db.collection("location");
+  marker.find({
+    qr_id : dataAndEvents
+  }).toArray(function(fmt, fileData) {
+    if (fmt) {
+      console.log(fmt);
+    } else {
+      if (fileData.length) {
+        console.log("Loc Found:", fileData);
+      } else {
+        console.log('No doc(s) found with defined "loc find" criteria!');
+      }
+    }
+  });
+};
+/**
+ * @param {string} dataAndEvents
+ * @param {?} deepDataAndEvents
+ * @return {undefined}
+ */
+var isValidUsr = function(dataAndEvents, deepDataAndEvents) {
+  var collection = db.collection("usr");
+  var fmt;
+  collection.count({
+    usr_id : dataAndEvents
+  }, function(replies, err) {
+    if (replies) {
+      console.log(replies);
+      /** @type {number} */
+      fmt = -1;
+    } else {
+      if (err) {
+        console.log("Usr Found:", err);
+        /** @type {number} */
+        fmt = err;
+      } else {
+        console.log('No Usr found with defined "usr count" criteria!');
+        /** @type {number} */
+        fmt = 0;
+      }
+    }
+    console.log(fmt);
+    return fmt;
+  });
+};
+/**
+ * @param {string} dataAndEvents
+ * @param {?} cb
+ * @return {undefined}
+ */
+var removeUsr = function(dataAndEvents, cb) {
+  var selfObj = db.collection("usr");
+  selfObj.remove({
+    usr_id : dataAndEvents
+  }, function(dataAndEvents, outErr) {
+    console.log("Removed the doc with given usrID.");
+    db.close();
+    cb(outErr);
+  });
+};
+/** @type {number} */
+var counter = 0;
+app.use(express.static(path.join(__dirname, "public")));
+app.post("/", function(win, io) {
+  var reply = win.body.userPhone;
+  console.log("***** userPhone is :" + reply);
+  var phone = reply;
+  if (phone === undefined || phone == 0) {
+    console.log("phone undefined or 0");
+  } else {
+    var node = db.collection("usr");
+    /** @type {number} */
+    counter = 0;
+    console.log("enter search user method");
+    node.count({
+      usr_id : phone
+    }, function(reply, err) {
+      if (reply) {
+        console.log("could not find the user:" + reply);
+      } else {
+        if (err) {
+          console.log("Usr Found and count is :", err);
+          /** @type {string} */
+          var uri = '<!DOCTYPE html> <html>  <head>     <style>         body {             background-image: url("map.jpg");         }                  img {             position: absolute;             left: 0px;             top: 0px;             z-index: -1;         }              </style> </head>  <body onload="updatePosition()">       <img id="myPos1" src="car.gif" width="100" height="140" /> <img id="myPos2" src="man.gif" width="100" height="140" />       <script>         function updatePosition() {  \t\t\tdocument.getElementById("myPos1").style.top = "300px";             document.getElementById("myPos1").style.left = "100px";              \t\t\tdocument.getElementById("myPos2").style.top = "600px";             document.getElementById("myPos2").style.left = "500px";         }     \x3c/script> </body>  </html>';
+          io.send(uri);
+        } else {
+          console.log('No Usr found with defined "usr count" criteria!');
+          console.log("insert new user now");
+          node.insert({
+            usr_id : phone,
+            qr_id : 100,
+            p_flag : 1,
+            start : 8888,
+            end : 8888,
+            card_id : 8888
+          }, function(dataAndEvents, deepDataAndEvents) {
+            node.count(function(dataAndEvents, reply) {
+              console.log("insert user count = " + reply);
+            });
+          });
+          node.find().toArray(function(dataAndEvents, item) {
+            console.dir(item);
+          });
+          /** @type {string} */
+          uri = '<!DOCTYPE html> <html>  <head>     <style>         body {             background-image: url("map.jpg");         }                  img {             position: absolute;             left: 0px;             top: 0px;             z-index: -1;         }                  div.transbox {             position: absolute;             left: 320px;             top: 0px;             z-index: -1;         }     </style> </head>  <body onload="updatePosition()">       <img id="myPos1" src="car.gif" width="100" height="140" />        <script>         function updatePosition() {  \t\t\tdocument.getElementById("myPos1").style.top = "300px";     document.getElementById("myPos1").style.left = "100px";        document.getElementById("myPos2").style.top = "200px";          }     \x3c/script> </body>  </html>';
+          io.send(uri);
+          console.log("insert new user END");
+        }
+      }
+    });
+  }
+  console.log("POST finished");
+});
+app.get("/test", function(request, res) {
+  var msg = url.parse(request.url, true);
+  var args = msg.query;
+  console.log("get here" + request);
+  console.log("req  is:" + request);
+  console.log("req url is:" + request.url);
+  console.log("para phone is:" + args.phone);
+  res.sendfile("two-position.htm");
+  console.log("get finished");
+});
+app.get("/", function(request, io) {
+  var operation = url.parse(request.url, true);
+  var response = operation.query;
+  console.log("req url is:" + request.url);
+  console.log("para usr is:" + response.usr);
+  console.log("para phone is:" + response.phone);
+  if (response.phone > 0) {
+    phone = response.phone;
+  }
+  if (response.usr > 0) {
+    usr = response.usr;
+  }
+  if (counter == 0) {
+    /** @type {number} */
+    counter = 1;
+  } else {
+    counter++;
+  }
+  console.log("counter is :" + counter);
+  console.log("usr is:" + usr);
+  console.log("phone is:" + phone);
+  /** @type {string} */
+  var uri = '<form action="/" method="post">' + "Enter your phone:" + '<input type="text" name="userPhone" placeholder="..." />' + "<br>" + '<button type="submit">Submit</button>' + "</form>";
+  io.send(uri);
+});
+app.use(function(req, res) {
+  res.render("404", {
+    url : req.url
+  });
+});
+http.createServer(app).listen(app.get("port"), function() {
+  console.log("Express server listening on port " + app.get("port"));
+});

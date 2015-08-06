@@ -1,0 +1,69 @@
+<html>
+<head>
+<title>Find The Car</title>
+<script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.3.14/angular.min.js"></script>
+<style>
+table, th , td {
+  border: 1px solid grey;
+  border-collapse: collapse;
+  padding: 5px;
+}
+table tr:nth-child(odd) {
+  background-color: #f2f2f2;
+}
+table tr:nth-child(even) {
+  background-color: #ffffff;
+}
+</style>
+</head>
+<body>
+<h2>VClub Find The Car</h2>
+<div ng-app="mainApp" ng-controller="studentController">
+<form name="studentForm" novalidate>
+<table border="0">
+<tr><td>Enter mobile phone:</td><td><input name="firstname" type="number" ng-model="firstName" required>
+   <span style="color:red" ng-show="studentForm.firstname.$dirty && studentForm.firstname.$invalid">
+      <span ng-show="studentForm.firstname.$error.required">Mobile phone number is required.</span>
+   </span>
+</td></tr>
+
+<tr><td><button 
+	ng-disabled="studentForm.firstname.$dirty && studentForm.firstname.$invalid ||
+			  studentForm.lastname.$dirty && studentForm.lastname.$invalid ||
+			  studentForm.email.$dirty && studentForm.email.$invalid"
+	ng-click="submit()">Submit</button></td></tr>
+</table>
+</form>
+</div>
+<script>
+var g_num  = 0;
+var mainApp = angular.module("mainApp", []);
+
+
+mainApp.controller('studentController', function($scope, $http) {
+   
+      $scope.submit = function(){
+		g_num = $scope.firstName ;
+url  = "http://104.131.158.155:9000/test/?phone="+g_num;
+if (g_num > 0)
+$http.post(url, {mobile:'g_num'}).success( function(data, status, headers, config){
+	//	$http.get(url).success( function(data, status, headers, config){
+console.log("ok data is "+data);
+console.log("ok data is "+data);
+console.log("ok data is "+data);
+alert("ok and data is:"+data.url+" status is:"+status);
+window.location = data.url;
+
+//window.location = "http://104.131.158.155:9000/one-position.htm"
+}).error( function(data, status, headers, config){
+console.log("fail data is "+data);
+alert("fail");
+//window.location = "http://104.131.158.155:9000/one-position.htm"
+});
+   } 
+   // $scope.submit();
+});
+</script>
+</body>
+</html>
+
